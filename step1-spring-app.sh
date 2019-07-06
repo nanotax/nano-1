@@ -130,34 +130,12 @@ pid=$!
 sleep 25
 echo "`date '+%Y-%m-%d %H:%M:%S'` | Done"
 
-# Load first test page, expecting JSON Output: {"id":1,"content":"Hello, World!"}
-expected1='{"id":1,"content":"Hello, World!"}'
-actual1=$(curl -s "http://localhost:8080/greeting")
-if [[ $actual1 = $expected1 ]]
-then
-    echo "`date '+%Y-%m-%d %H:%M:%S'` | Passed Test 1"
-else
-    echo "`date '+%Y-%m-%d %H:%M:%S'` | Failed Test 1, expected: $expected1, actual: $actual1"
-fi
-
-# Wait for 15 seconds
-sleep 15
-
-# Load second test page, expecting JSON Output: {"id":2,"content":"Hello, User!"}
-expected2='{"id":2,"content":"Hello, User!"}'
-actual2=$(curl -s "http://localhost:8080/greeting?name=User")
-if [[ $actual2 = $expected2 ]]
-then
-    echo "`date '+%Y-%m-%d %H:%M:%S'` | Passed Test 2"
-else
-    echo "`date '+%Y-%m-%d %H:%M:%S'` | Failed Test 2, expected: $expected2, actual: $actual2"
-fi
-
-# Continue running service for next 60 seconds
-sleep 60
+# Run Tests
+echo "`date '+%Y-%m-%d %H:%M:%S'` | Start Tests"
+../test.sh
+echo "`date '+%Y-%m-%d %H:%M:%S'` | Done"
 
 # Shut down the service
 echo "`date '+%Y-%m-%d %H:%M:%S'` | Shutting down pid: $pid"
 kill -9 $pid
-
 echo "`date '+%Y-%m-%d %H:%M:%S'` | Done"
