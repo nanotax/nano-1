@@ -18,10 +18,10 @@ brew cask install caskroom/versions/java8
 ```
 > full installation instruction can be found [here](https://www.chrisjmendez.com/2018/10/14/how-to-install-java-on-osx-using-homebrew/)
 - Gradle 4+
-> full installation instruction can be found [here](https://www.code2bits.com/how-to-install-gradle-on-macos-using-homebrew/)
 ```
 brew install gradle
 ```
+> full installation instruction can be found [here](https://www.code2bits.com/how-to-install-gradle-on-macos-using-homebrew/)
 - Docker 18+ 
 ```
 brew tap caskroom/cask
@@ -59,3 +59,17 @@ This step will setup a basic build script, that will allow to create Docker imag
 |Run service using Docker|
 |:-----------------------|
 |docker run -d --expose 8080 -p 8080:8080 &lt;NAME&gt;|
+
+## How to use the Greeting Rest Service
+Assuming the service is running on "localhost" with "hello" as its name, lets test the follwoing use cases:
+### Use case #1: Default Greeting
+```
+expected='{"id":1,"content":"Hello, World!"}'
+actual=$(curl -s "http://localhost:8080/greeting")
+```
+### Use case #2: Customer Greeting
+```
+expected2='{"id":2,"content":"Hello, User!"}'
+actual2=$(curl -s "http://localhost:8080/greeting?name=User")
+```
+> Keep in mind if you were to run these test use case more then once, Id field will get incremented and will not longer match with expected value.
