@@ -1,3 +1,5 @@
+|macOS|
+|-----|
 # Simple Rest Service [nano-1]
 
 Build with:
