@@ -8,7 +8,6 @@ else
 fi
 
 # Check if aws cli is installed
-
 if type -p aws; then
   	echo "[CHECK!] Found aws cli"
 else
