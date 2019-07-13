@@ -6,6 +6,38 @@ if [ -z "$1" ]
     exit 
 fi
 
+echo "version: 0.2
+env:
+  variables:
+    JAVA_HOME: \"/usr/lib/jvm/java-8-openjdk-amd64\"
+phases:
+  install:
+    runtime-versions:
+      java: openjdk8
+  pre_build:
+    commands:
+    - echo Logging in to Amazon ECR...
+    - \$(aws ecr get-login --no-include-email --region \$AWS_REGION)
+  build:
+    commands:
+    - echo Building Source
+    - gradle clean
+    - gradle build
+    - echo Packaging Docker containers
+    - gradle buildAppAndDockerContainer
+    finally:
+    - echo Finished
+  post_build:
+    commands:
+    - docker tag hello:latest \$AWS_ACCOUNT_ID.dkr.ecr.us-west-1.amazonaws.com/$1:latest
+    - docker push \$AWS_ACCOUNT_ID.dkr.ecr.us-west-1.amazonaws.com/$1:latest
+    finally:
+    - echo Finished
+cache:
+  paths:
+  - '/root/.m2/**/*'
+" > $1/buildspec.yml
+
 # print out list of current repositories
 echo "`date '+%Y-%m-%d %H:%M:%S'` | Current list of repositories:"
 echo "----------------------------------"
@@ -66,12 +98,6 @@ fi
 echo "`date '+%Y-%m-%d %H:%M:%S'` |   creating Code Build Project"
 echo "----------------------------------"
 aws codebuild create-project --name "$projectName" --source "type=GITHUB,location=$sourceUrl" --artifacts "type=NO_ARTIFACTS" --environment "type=LINUX_CONTAINER,image=aws/codebuild/standard:2.0,privilegedMode=true,computeType=BUILD_GENERAL1_SMALL,environmentVariables=[{name=AWS_ACCOUNT_ID,value=$awsAccountId,type=PLAINTEXT}]" --service-role "$role"
-echo "----------------------------------"
-
-# start Code Build project
-echo "`date '+%Y-%m-%d %H:%M:%S'` | Start build for $projectName"
-echo "----------------------------------"
-aws codebuild start-build --project-name $projectName
 echo "----------------------------------"
 
 # add WebHook to trigger project build on any changes to the GITHUB source
