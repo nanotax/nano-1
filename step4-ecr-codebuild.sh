@@ -2,9 +2,13 @@
 # Check for first argument, a name of first service.
 if [ -z "$1" ]
   then
-    echo "Need to provide a name of first service."
+    echo "Need to provide a path of the service."
+    echo "./step4-ecr-codebuild.sh <Path>"
     exit 
 fi
+cd $1
+
+serviceName=$(basename $1)
 
 echo "version: 0.2
 env:
@@ -24,19 +28,19 @@ phases:
     - gradle clean
     - gradle build
     - echo Packaging Docker containers
-    - gradle buildAppAndDockerContainer
+    - ./buildDockerImage.sh
     finally:
     - echo Finished
   post_build:
     commands:
-    - docker tag hello:latest \$AWS_ACCOUNT_ID.dkr.ecr.us-west-1.amazonaws.com/$1:latest
-    - docker push \$AWS_ACCOUNT_ID.dkr.ecr.us-west-1.amazonaws.com/$1:latest
+    - docker tag hello:latest \$AWS_ACCOUNT_ID.dkr.ecr.\$AWS_REGION.amazonaws.com/\$serviceName:latest
+    - docker push \$AWS_ACCOUNT_ID.dkr.ecr.\$AWS_REGION.amazonaws.com/\$serviceName:latest
     finally:
     - echo Finished
 cache:
   paths:
   - '/root/.m2/**/*'
-" > $1/buildspec.yml
+" > buildspec.yml
 
 # print out list of current repositories
 echo "`date '+%Y-%m-%d %H:%M:%S'` | Current list of repositories:"
@@ -45,9 +49,9 @@ aws ecr describe-repositories
 echo "----------------------------------"
 
 # add new repository
-echo "`date '+%Y-%m-%d %H:%M:%S'` | Add repository $1"
+echo "`date '+%Y-%m-%d %H:%M:%S'` | Add repository $serviceName"
 echo "----------------------------------"
-aws ecr create-repository --repository-name $1
+aws ecr create-repository --repository-name $serviceName
 echo "----------------------------------"
 
 # ask user to specify GITHUB Personal Access Token
@@ -69,19 +73,32 @@ awsAccountId=`echo $credentials | cut -d ":" -f 6`
 echo -n "`date '+%Y-%m-%d %H:%M:%S'` | Please provide GITHUB source URL: "
 read sourceUrl
 
+# ask the user to provide the AWS-Region, default will be provided if nothing is entered
+defaultRegion=$(aws configure get region)
+echo -n "`date '+%Y-%m-%d %H:%M:%S'` | Please provide AWS Code Build runner role [$defaultRegion]: "
+read awsRegion
+
+# check if user did not provide any input
+if [ -z "$AWS_REGION" ]
+then
+  # set default role name
+  awsRegion="$defaultRegion"
+  echo "`date '+%Y-%m-%d %H:%M:%S'` |   defaulting to: $awsRegion"
+fi
+
 # ask the user to provide the name of the Code Build project, default will be provided if nothing is entered
-echo -n "`date '+%Y-%m-%d %H:%M:%S'` | Please provide new Code Build Project Name [$1-build]: "
+echo -n "`date '+%Y-%m-%d %H:%M:%S'` | Please provide new Code Build Project Name [$serviceName-build]: "
 read projectName
 
 # check if user did not provide any input
 if [ -z "$projectName" ]
 then
   # set default project name
-  projectName="$1-build"
+  projectName="$serviceName-build"
   echo "`date '+%Y-%m-%d %H:%M:%S'` |   defaulting to: $projectName"
 fi
 
-# as the user to provide the AWS role that will be running Code Build projects, default will be provided if nothing is entered
+# ask the user to provide the AWS role that will be running Code Build projects, default will be provided if nothing is entered
 echo -n "`date '+%Y-%m-%d %H:%M:%S'` | Please provide AWS Code Build runner role [ecr-codebuild-runner-role]: "
 read role
 
@@ -97,11 +114,11 @@ fi
 # AWS Account ID will be passed to the Code Build project as an ENV parameter "AWS_ACCOUNT_ID"
 echo "`date '+%Y-%m-%d %H:%M:%S'` |   creating Code Build Project"
 echo "----------------------------------"
-aws codebuild create-project --name "$projectName" --source "type=GITHUB,location=$sourceUrl" --artifacts "type=NO_ARTIFACTS" --environment "type=LINUX_CONTAINER,image=aws/codebuild/standard:2.0,privilegedMode=true,computeType=BUILD_GENERAL1_SMALL,environmentVariables=[{name=AWS_ACCOUNT_ID,value=$awsAccountId,type=PLAINTEXT}]" --service-role "$role"
+aws codebuild create-project --name "$projectName" --source "type=GITHUB,location=$sourceUrl" --artifacts "type=NO_ARTIFACTS" --environment "type=LINUX_CONTAINER,image=aws/codebuild/standard:2.0,privilegedMode=true,computeType=BUILD_GENERAL1_SMALL,environmentVariables=[{name=AWS_ACCOUNT_ID,value=$awsAccountId,type=PLAINTEXT},{name=AWS_REGION,value=$awsRegion,type=PLAINTEXT}]" --service-role "$role"
 echo "----------------------------------"
 
 # add WebHook to trigger project build on any changes to the GITHUB source
 echo "`date '+%Y-%m-%d %H:%M:%S'` | Setup Webhook for $sourceUrl"
 echo "----------------------------------"
-aws codebuild create-webhook --project-name $projectName
+aws codebuild create-webhook --project-name "$projectName"
 echo "----------------------------------"
