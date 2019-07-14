@@ -73,3 +73,49 @@ expected2='{"id":2,"content":"Hello, User!"}'
 actual2=$(curl -s "http://localhost:8080/greeting?name=User")
 ```
 > Keep in mind if you were to run these test use case more then once, Id field will get incremented and will not longer match with expected value.
+
+# Simple Rest Service built using AWS Code Base [nano-1a]
+Will be using the source we have created in "nono-1". The following steps will check for AWS CLI prerequisites, then will add the neccessary Code Build configuration files and finally exececute creation of the Elastic Container Repository and Code Build Project.
+
+Build with:
+- AWS CLI
+
+## Step 3: Prerequisites
+This step will check for all the neccessary version of the following software:
+- Python 3.x
+```
+brew install python
+```
+> full installation instruction can be found [here](https://www.saintlad.com/install-python-3-on-mac/)
+- aws cli 1.16.x
+```
+pip3 install awscli
+```
+> full installation instruction can be found [here](https://docs.aws.amazon.com/cli/latest/userguide/install-macos.html)
+
+Todo an automatic check please run the following script:
+```
+./step3-check.sh
+```
+## Step 4: ECR & CodeBuild
+This step will setup Elastic Container Repository for your GITHUB project and add Code Build project.
+```
+./step4-ecr-codebuild.sh <Service Path>
+```
+
+## How to use the Greeting Rest Service
+Since the Docker image is stored in the AWS Elastic Container Registry, Elastic Container Service can be initiatate with the image. Once launched the following test script can be used: 
+```
+./testECS <ECS DNS host>
+```
+### Use case #1: Default Greeting
+```
+expected='{"id":1,"content":"Hello, World!"}'
+actual=$(curl -s "http://<ECS DNS host>:8080/greeting")
+```
+### Use case #2: Customer Greeting
+```
+expected2='{"id":2,"content":"Hello, User!"}'
+actual2=$(curl -s "http://<ECS DNS host>:8080/greeting?name=User")
+```
+> Keep in mind if you were to run these test use case more then once, Id field will get incremented and will not longer match with expected value.
