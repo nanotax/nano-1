@@ -33,8 +33,8 @@ phases:
     - echo Finished
   post_build:
     commands:
-    - docker tag hello:latest \$AWS_ACCOUNT_ID.dkr.ecr.\$AWS_REGION.amazonaws.com/\$serviceName:latest
-    - docker push \$AWS_ACCOUNT_ID.dkr.ecr.\$AWS_REGION.amazonaws.com/\$serviceName:latest
+    - docker tag hello:latest \$AWS_ACCOUNT_ID.dkr.ecr.\$AWS_REGION.amazonaws.com/$serviceName:latest
+    - docker push \$AWS_ACCOUNT_ID.dkr.ecr.\$AWS_REGION.amazonaws.com/$serviceName:latest
     finally:
     - echo Finished
 cache:
@@ -50,9 +50,7 @@ echo "----------------------------------"
 
 # add new repository
 echo "`date '+%Y-%m-%d %H:%M:%S'` | Add repository $serviceName"
-echo "----------------------------------"
-aws ecr create-repository --repository-name $serviceName
-echo "----------------------------------"
+newRepository=$(aws ecr create-repository --repository-name "$serviceName")
 
 # ask user to specify GITHUB Personal Access Token
 echo "`date '+%Y-%m-%d %H:%M:%S'` | Add GITHUB source"
@@ -61,10 +59,7 @@ read token
 
 # import security credentials from GITHUB
 echo "`date '+%Y-%m-%d %H:%M:%S'` |   importing source credentials"
-echo "----------------------------------"
 credentials=$(aws codebuild import-source-credentials --token $token --server-type GITHUB --auth-type PERSONAL_ACCESS_TOKEN)
-echo $credentials
-echo "----------------------------------"
 
 # extract aws account id from the resulting JSON, to be used later
 awsAccountId=`echo $credentials | cut -d ":" -f 6`
@@ -113,12 +108,8 @@ fi
 # create Code Build project
 # AWS Account ID will be passed to the Code Build project as an ENV parameter "AWS_ACCOUNT_ID"
 echo "`date '+%Y-%m-%d %H:%M:%S'` |   creating Code Build Project"
-echo "----------------------------------"
-aws codebuild create-project --name "$projectName" --source "type=GITHUB,location=$sourceUrl" --artifacts "type=NO_ARTIFACTS" --environment "type=LINUX_CONTAINER,image=aws/codebuild/standard:2.0,privilegedMode=true,computeType=BUILD_GENERAL1_SMALL,environmentVariables=[{name=AWS_ACCOUNT_ID,value=$awsAccountId,type=PLAINTEXT},{name=AWS_REGION,value=$awsRegion,type=PLAINTEXT}]" --service-role "$role"
-echo "----------------------------------"
+newProject=$(aws codebuild create-project --name "$projectName" --source "type=GITHUB,location=$sourceUrl" --artifacts "type=NO_ARTIFACTS" --environment "type=LINUX_CONTAINER,image=aws/codebuild/standard:2.0,privilegedMode=true,computeType=BUILD_GENERAL1_SMALL,environmentVariables=[{name=AWS_ACCOUNT_ID,value=$awsAccountId,type=PLAINTEXT},{name=AWS_REGION,value=$awsRegion,type=PLAINTEXT}]" --service-role "$role")
 
 # add WebHook to trigger project build on any changes to the GITHUB source
 echo "`date '+%Y-%m-%d %H:%M:%S'` | Setup Webhook for $sourceUrl"
-echo "----------------------------------"
-aws codebuild create-webhook --project-name "$projectName"
-echo "----------------------------------"
+newWebhook=$(aws codebuild create-webhook --project-name "$projectName")
