@@ -1,16 +1,28 @@
 #!/bin/bash
 # Check if Python3 is installed
 if type -p python3; then
-  	echo "[CHECK!] Found Python 3"
+    _python=python3
+    echo "[CHECK!] Found $(python3 --version)"
 else
-    echo "[FAILED] Python 3 is not installed"
+    echo "[FAILED] No python3 found | Please install Python 3.x"
     echo "  Use brew: brew install python"
 fi
 
 # Check if aws cli is installed
 if type -p aws; then
-  	echo "[CHECK!] Found aws cli"
+  	_aws=aws
 else
-    echo "[FAILED] aws cli is not installed"
+    echo "[FAILED] No aws cli found | Please install aws cli 1.16.x"
     echo "  Use pip3: pip3 install awscli"
 fi
+
+if [[ "$_aws" ]]; then
+    version=$("$_aws" --version | cut -d "/" -f 2 | cut -d " " -f 1)
+    if [[ "$version" > "1.16" ]]; then
+    	echo "[CHECK!] Found aws cli version: $version"
+    else         
+        echo "[FAILED] aws cli version $version, less than 1.16"
+        exit
+    fi
+fi
+
